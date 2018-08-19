@@ -3,6 +3,7 @@ require 'pry-remote'
 require 'pp'
 require 'active_support/time'
 require 'byebug'
+require 'json'
 
 @clicks = [
 { ip:'22.22.22.22', timestamp:'3/11/2016 02:02:58', amount: 7.00 },
@@ -74,20 +75,21 @@ def get_clicks_with_in_period(clicks)
     # //if it is add that hour gap and event to the has and the click it self as the value in an array of objects
 end
 
-def filter_duplicates_from_period
-end
+# def filter_duplicates_from_period
+# end
 
 def get_earliest_click
 end
 
 def filter_for_bot_clicks(clicks)
     #if there are more than 10 clicks from one ip remove those clicks
-    #filters out click events that have 10 or more click
     click_count = []
     # I added a sort here because I noticed that this was filter for delete was not deleting all the instances of 55.55.55.55, it seemed to be getting the indices wrong
     # sorting resolved this
     clicks.sort{ |click_event1, click_event2| click_event1["ip"] <=> click_event2["ip"] }.each_with_index do |item, index|
         click_count.push(item[:ip])
+        #the delete_if removes duplicates, it requires a logical operation
+        #so I use current_ip to assist in the comparison
         current_ip = item[:ip]
         if click_count.select{|ip| ip == item[:ip]}.count >= 10
             clicks.delete_if{ |x| x[:ip] == current_ip} 
@@ -97,24 +99,34 @@ def filter_for_bot_clicks(clicks)
 end
 
 
+def get_best_time_value_click(time_obj)
+    result = []
+    highest_values = time_obj.each do |key, click_obj|
+        result.push click_obj.sort{|s,x| s[:timestamp] <=> x[:timestamp]}.group_by{|click_group_ip| click_group_ip[:ip]}.map{|key, value| value.max_by{ |click_for_max| click_for_max[:amount]}}
+    end
+
+    result = result.flatten
+end
+
 @filtered_clicks = filter_for_bot_clicks(@clicks)
 
 @time_obj =  get_clicks_with_in_period(@filtered_clicks)
 
-# @time_obj.each do |t|
-#     t.sort{|click1, click2| click1.}
-# end
-# @time_obj["2016-11-03T02:00:00+00:00"]
+result = get_best_time_value_click(@time_obj)
 
-# @time_obj["2016-11-03T07:00:00+00:00"].group_by{|y| y[:ip]}.
-# map{|key, value| value.max_by{ |click| click[:amount]}}
 
-@test = []
-highest_values = @time_obj.each do |key, click_obj|
-    # pp click_obj
-    @test.push click_obj.sort{|s,x| s[:timestamp] <=> x[:timestamp]}.group_by{|click_group_ip| click_group_ip[:ip]}.map{|key, value| value.max_by{ |click_for_max| click_for_max[:amount]}}
-
-    #  @test.push click_obj.group_by{|click_group_ip| click_group_ip[:ip]}.map{|key, value| value.max_by{ |click_for_max| click_for_max[:amount]}}
+def write_to_file(result)
+    File.open('result-set.txt', 'w') { |file| file.write(result) }
 end
 
-pp @test.flatten
+def print_result(result)
+    pp result
+end
+
+write_to_file(result)
+print_result(result)
+
+# sort_clicks
+# group_clicks
+# write_to_file
+
