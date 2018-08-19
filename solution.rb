@@ -3,7 +3,6 @@ require 'pry-remote'
 require 'pp'
 require 'active_support/time'
 require 'byebug'
-require 'json'
 
 @clicks = [
 { ip:'22.22.22.22', timestamp:'3/11/2016 02:02:58', amount: 7.00 },
@@ -44,76 +43,83 @@ require 'json'
 ]
 
 
+def get_time_obj_keys(click)
+    time_obj_keys = {}
 
+    time_obj_keys["time_of_click"] = DateTime.parse(click[:timestamp])
+    time_obj_keys["start_of_time_block"] = time_obj_keys["time_of_click"].beginning_of_hour
+    time_obj_keys["end_of_time_block"] = time_obj_keys["time_of_click"].beginning_of_hour + 59.minutes
 
-def get_most_expensive_click
+    time_obj_keys
 end
 
 def get_clicks_with_in_period(clicks)
+    #an object is used to hold time blocks
     time_range_obj = {}
-    clicks.each_with_index do |click, index|
 
-        time_of_click = DateTime.parse(click[:timestamp])
-        start_of_time_block = time_of_click.beginning_of_hour
-        end_of_time_block = time_of_click.beginning_of_hour + 59.minutes
+    clicks.each do |click|
+        time_obj_keys = get_time_obj_keys(click)
+       
+        start_time_string = time_obj_keys["start_of_time_block"].strftime
+        end_time_string = time_obj_keys["end_of_time_block"].strftime
 
-        start_time_string = start_of_time_block.strftime
-        end_time_string = end_of_time_block.strftime
-
-  
+        #if no time block exists for the current click create one
         time_range_obj[start_time_string] ||= Array.new
- 
         time_range_obj[end_time_string] ||= Array.new
 
-        time_of_click >= start_of_time_block ? time_range_obj[start_time_string].push(click) : time_range_obj[end_time_string].push(click)
+        #determine what time block the click should be in and push it in to the array
+        time_obj_keys["time_of_click"] >= time_obj_keys["start_of_time_block"] ? time_range_obj[start_time_string].push(click) : time_range_obj[end_time_string].push(click)
     end
     time_range_obj
-
-
-    # //iterate through time by the hour
-    # //see if the current click event is with in the current hour
-    # //if it is add that hour gap and event to the has and the click it self as the value in an array of objects
 end
 
-# def filter_duplicates_from_period
-# end
-
-def get_earliest_click
+def sort_obj_by_time(click_obj)
+    click_obj.sort{|click1, click2| click1[:timestamp] <=> click2[:timestamp]}
 end
 
-def filter_for_bot_clicks(clicks)
-    #if there are more than 10 clicks from one ip remove those clicks
+def filter_for_10_or_more_clicks(clicks)
     click_count = []
-    # I added a sort here because I noticed that this was filter for delete was not deleting all the instances of 55.55.55.55, it seemed to be getting the indices wrong
-    # sorting resolved this
-    clicks.sort{ |click_event1, click_event2| click_event1["ip"] <=> click_event2["ip"] }.each_with_index do |item, index|
+
+    # sorting is required to get the deletes to work
+    sort_obj_by_time(clicks).each do |item|
         click_count.push(item[:ip])
+        
         #the delete_if removes duplicates, it requires a logical operation
-        #so I use current_ip to assist in the comparison
         current_ip = item[:ip]
+
         if click_count.select{|ip| ip == item[:ip]}.count >= 10
-            clicks.delete_if{ |x| x[:ip] == current_ip} 
+            delete_click_obj(clicks, current_ip)
         end
     end
     clicks
 end
 
 
+def delete_click_obj(clicks, current_ip)
+    clicks.delete_if{ |click| click[:ip] == current_ip} 
+end
+
+
+def group_clicks_by_ip(click_obj)
+    click_obj.group_by{|click_group_ip| click_group_ip[:ip]}
+end
+
+def get_max_value(click_obj)
+    click_obj.map{|key, value| value.max_by{ |click_for_max| click_for_max[:amount]}}
+end
+
+
 def get_best_time_value_click(time_obj)
     result = []
     highest_values = time_obj.each do |key, click_obj|
-        result.push click_obj.sort{|s,x| s[:timestamp] <=> x[:timestamp]}.group_by{|click_group_ip| click_group_ip[:ip]}.map{|key, value| value.max_by{ |click_for_max| click_for_max[:amount]}}
-    end
+        sorted_obj = sort_obj_by_time(click_obj)
+        grouped_obj = group_clicks_by_ip(sorted_obj)
+        max_value_found = get_max_value(grouped_obj)
 
+        result.push(max_value_found)
+    end
     result = result.flatten
 end
-
-@filtered_clicks = filter_for_bot_clicks(@clicks)
-
-@time_obj =  get_clicks_with_in_period(@filtered_clicks)
-
-result = get_best_time_value_click(@time_obj)
-
 
 def write_to_file(result)
     File.open('result-set.txt', 'w') { |file| file.write(result) }
@@ -123,10 +129,11 @@ def print_result(result)
     pp result
 end
 
+filtered_clicks = filter_for_10_or_more_clicks(@clicks)
+
+time_obj =  get_clicks_with_in_period(filtered_clicks)
+
+result = get_best_time_value_click(time_obj)
+
 write_to_file(result)
 print_result(result)
-
-# sort_clicks
-# group_clicks
-# write_to_file
-
