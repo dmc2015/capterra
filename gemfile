@@ -1,8 +1,12 @@
 source 'https://rubygems.org'
 
+#assist in debugging
 gem 'byebug'
-gem 'pry', '0.9.10'
 gem 'pry-remote'
 gem 'pry-nav'
+
+## provides pretty print output
 gem 'pp'
+
+##  provides useful time based methods
 gem 'activesupport'
