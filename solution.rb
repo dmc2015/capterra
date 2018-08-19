@@ -4,7 +4,7 @@ require 'pp'
 require 'active_support/time'
 require 'byebug'
 
-@clicks = [
+clicks = [
 { ip:'22.22.22.22', timestamp:'3/11/2016 02:02:58', amount: 7.00 },
 { ip:'11.11.11.11', timestamp:'3/11/2016 02:12:32', amount: 6.50 },
 { ip:'11.11.11.11', timestamp:'3/11/2016 02:13:11', amount: 7.25 },
@@ -129,7 +129,7 @@ def print_result(result)
     pp result
 end
 
-filtered_clicks = filter_for_10_or_more_clicks(@clicks)
+filtered_clicks = filter_for_10_or_more_clicks(clicks)
 
 time_obj =  get_clicks_with_in_period(filtered_clicks)
 
