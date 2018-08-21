@@ -10,4 +10,4 @@ ruby solution.rb
 ## OTHER DETAILS
 - the output of the algorithm is in result-set.txt
 - comments are in the gemfile regarding the external libraries that were used and why
-- comments are also through out the solution.rb
+- comments are also throughout the solution.rb
