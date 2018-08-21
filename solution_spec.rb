@@ -11,8 +11,12 @@ require_relative "solution"
 byebug
 class TestSolution < Test::Unit::TestCase
     # CF = ClickFinder
-    byebug
+    
+    def setup
+        byebug
+    end
     def test_data
+
         byebug
         middle_value = ClickFinder::CLICKS.count / 2
         byebug
